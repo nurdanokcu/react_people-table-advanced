@@ -1,17 +1,24 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { PeopleFilters } from '../components/PeopleFilters';
 import { Loader } from '../components/Loader';
 import { PeopleTable } from '../components/PeopleTable';
 import { getPeople } from '../api';
 import { Person } from '../types/Person';
+import { SortPeople } from '../utils/SortPeople';
 
 export const PeoplePage:React.FC = () => {
   const [isLoading, setLoading] = useState(false);
   const [didload, setLoaded] = useState(false);
   const [people, setPeople] = useState<Person[]>([]);
   const [hasError, setError] = useState(false);
-  const { personSlug } = useParams();
+  const [searchParams] = useSearchParams();
+
+  const query = (searchParams.get('query') || '').toLowerCase().trim();
+  const centuries = searchParams.getAll('centuries');
+  const sex = searchParams.get('sex');
+  const sortField = searchParams.get('sort') || null;
+  const order = searchParams.get('order') || null;
 
   useEffect(() => {
     const loadPeople = async () => {
@@ -31,10 +38,40 @@ export const PeoplePage:React.FC = () => {
     loadPeople();
   }, [getPeople]);
 
+  const filterByQuery = (
+    person: Person,
+  ) => person.name.toLowerCase().includes(query)
+      || person.motherName?.toLowerCase().includes(query)
+      || person.fatherName?.toLowerCase().includes(query);
+
+  const filterByCentury = (person: Person) => (
+    centuries.length
+      ? centuries.includes(String(Math.ceil(person.died / 100)))
+      : true);
+
+  const filterBySex = (person: Person) => (
+    sex
+      ? person.sex === sex
+      : true
+  );
+
+  const visiblePeople = people.filter(
+    person => filterByQuery(person)
+    && filterByCentury(person)
+    && filterBySex(person),
+  );
+
+  SortPeople(visiblePeople, sortField, order);
+
   const showTable = !isLoading
     && didload
     && !hasError
-    && people.length > 0;
+    && visiblePeople.length > 0;
+
+  const noSearchResult = !isLoading
+    && didload
+    && !hasError
+    && !visiblePeople.length;
 
   return (
     <>
@@ -64,12 +101,13 @@ export const PeoplePage:React.FC = () => {
                 </p>
               )}
 
-              <p>There are no people matching the current search criteria</p>
+              {noSearchResult && (
+                <p>There are no people matching the current search criteria</p>
+              )}
 
               {showTable && (
                 <PeopleTable
-                  people={people}
-                  personSlug={personSlug}
+                  people={visiblePeople}
                 />
               )}
             </div>

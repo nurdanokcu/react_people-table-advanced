@@ -1,12 +1,20 @@
+import cn from 'classnames';
+import { useParams } from 'react-router-dom';
 import { Person } from '../types';
-import { TableRow } from './TableRow';
+import { PersonLink } from './PersonLink';
+import { SortLink } from './SortLink';
 
 type Props = {
   people: Person[];
-  personSlug?: string;
 };
 
-export const PeopleTable:React.FC<Props> = ({ people, personSlug }) => {
+export const PeopleTable:React.FC<Props> = ({ people }) => {
+  const { personSlug } = useParams();
+
+  const getParent = (parentName: string | null) => {
+    return people.find(({ name }) => name === parentName) || null;
+  };
+
   return (
     <table
       data-cy="peopleTable"
@@ -17,44 +25,28 @@ export const PeopleTable:React.FC<Props> = ({ people, personSlug }) => {
           <th>
             <span className="is-flex is-flex-wrap-nowrap">
               Name
-              <a href="#/people?sort=name">
-                <span className="icon">
-                  <i className="fas fa-sort" />
-                </span>
-              </a>
+              <SortLink field="name" />
             </span>
           </th>
 
           <th>
             <span className="is-flex is-flex-wrap-nowrap">
               Sex
-              <a href="#/people?sort=sex">
-                <span className="icon">
-                  <i className="fas fa-sort" />
-                </span>
-              </a>
+              <SortLink field="sex" />
             </span>
           </th>
 
           <th>
             <span className="is-flex is-flex-wrap-nowrap">
               Born
-              <a href="#/people?sort=born&amp;order=desc">
-                <span className="icon">
-                  <i className="fas fa-sort-up" />
-                </span>
-              </a>
+              <SortLink field="born" />
             </span>
           </th>
 
           <th>
             <span className="is-flex is-flex-wrap-nowrap">
               Died
-              <a href="#/people?sort=died">
-                <span className="icon">
-                  <i className="fas fa-sort" />
-                </span>
-              </a>
+              <SortLink field="died" />
             </span>
           </th>
 
@@ -64,13 +56,43 @@ export const PeopleTable:React.FC<Props> = ({ people, personSlug }) => {
       </thead>
 
       <tbody>
-        {people.map(person => (
-          <TableRow
-            person={person}
-            people={people}
-            personSlug={personSlug}
-          />
-        ))}
+        {people.map(person => {
+          const {
+            slug, sex, born, died, motherName, fatherName,
+          } = person;
+
+          const mother = getParent(motherName);
+          const father = getParent(fatherName);
+
+          return (
+            <tr
+              key={slug}
+              data-cy="person"
+              className={cn(
+                { 'has-background-warning': slug === personSlug },
+              )}
+            >
+              <td><PersonLink person={person} /></td>
+              <td>{sex}</td>
+              <td>{born}</td>
+              <td>{died}</td>
+
+              <td>
+                {!motherName && ('-')}
+                {motherName && mother
+                  ? (<PersonLink person={mother} />)
+                  : (motherName)}
+              </td>
+
+              <td>
+                {!fatherName && ('-')}
+                {fatherName && father
+                  ? (<PersonLink person={father} />)
+                  : (fatherName)}
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
